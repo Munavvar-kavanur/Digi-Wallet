@@ -126,7 +126,7 @@ class SettingsScreen extends ConsumerWidget {
                       Icon(Icons.savings_rounded, size: 48, color: Theme.of(context).primaryColor.withOpacity(0.2)),
                       const SizedBox(height: 16),
                       Text(
-                        "Digi Expense Tracker",
+                        "Digi Wallet",
                         style: TextStyle(
                           fontWeight: FontWeight.w600, 
                           color: Theme.of(context).textTheme.bodySmall?.color
