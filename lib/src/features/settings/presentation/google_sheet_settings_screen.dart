@@ -57,6 +57,20 @@ function doGet(e) {
         if (row.length > 1 && row[1] && row[1].toString() !== "") incomes.push(row[1].toString());
      }
   }
+
+  // Fetch Settings (Currency, etc.)
+  var settingsSheet = ss.getSheetByName("Settings");
+  var settings = {};
+  
+  if (settingsSheet) {
+    var setRows = settingsSheet.getDataRange().getValues();
+    for (var i = 1; i < setRows.length; i++) {
+       var row = setRows[i];
+       if (row.length > 1 && row[0]) {
+         settings[row[0].toString()] = row[1].toString();
+       }
+    }
+  }
   
   return ContentService.createTextOutput(JSON.stringify({
     'status': 'success', 
@@ -64,7 +78,8 @@ function doGet(e) {
     'categories': {
       'expense': expenses,
       'income': incomes
-    }
+    },
+    'settings': settings
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -190,29 +205,82 @@ function doPost(e) {
 
   Future<void> _saveUrl() async {
     final prefs = ref.read(sharedPreferencesProvider);
-    final url = _urlController.text.trim().replaceAll(RegExp(r'\s+'), '');
+    final url = _urlController.text.trim().replaceAll(RegExp(r'\s+'), ''); // Clean spaces
     await prefs.setString('google_sheet_url', url);
     
     if (url.isNotEmpty) {
-      // Show snackbar first
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
            content: Text("Connecting & Syncing data..."),
            behavior: SnackBarBehavior.floating,
+           duration: Duration(seconds: 1),
         ));
       }
-      await _forcePushCategories();
-      await _syncSettings(url);
+
+      // TWO-WAY SYNC LOGIC
+      // 1. Try to PULL configuration from Sheet first (Sheet is Master if data exists)
+      final pulled = await _pullConfiguration(url);
+      
+      // 2. If we didn't find any config on the sheet (it's likely new), PUSH our local config
+      if (!pulled) {
+         if(mounted) debugPrint("Sheet appears new, pushing local config...");
+         await _forcePushCategories();
+         await _syncSettings(url);
+      } else {
+         if(mounted) debugPrint("Config pulled from Sheet.");
+      }
     }
     
     // Explicit success
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-         content: Text("Setup Complete: Connected & Categories Synced!"),
+         content: Text("Setup Complete: Connected & Synced!"),
          behavior: SnackBarBehavior.floating,
          backgroundColor: Colors.green,
       ));
+    }
+  }
+
+  /// Returns true if configuration was successfully pulled and found on the sheet
+  Future<bool> _pullConfiguration(String url) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode != 200) return false;
+
+      final json = jsonDecode(response.body);
+      bool foundData = false;
+
+      // 1. Parse Settings (Currency)
+      if (json['settings'] != null) {
+        final settings = json['settings'];
+        if (settings['currency'] != null) {
+          final String sheetCurrency = settings['currency'].toString();
+          ref.read(currencyProvider.notifier).setCurrency(sheetCurrency);
+          foundData = true;
+        }
+      }
+
+      // 2. Parse Categories
+      if (json['categories'] != null) {
+        final categories = json['categories'];
+        final List<dynamic>? expenses = categories['expense'];
+        final List<dynamic>? incomes = categories['income'];
+
+        if ((expenses != null && expenses.isNotEmpty) || (incomes != null && incomes.isNotEmpty)) {
+           await ref.read(categoryRepositoryProvider).syncWithRemoteData(
+             expenses ?? [], 
+             incomes ?? []
+           );
+           foundData = true;
+        }
+      }
+
+      return foundData;
+
+    } catch (e) {
+      debugPrint("Pull Config Failed: $e");
+      return false;
     }
   }
 
