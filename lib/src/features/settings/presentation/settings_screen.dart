@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../common/providers/theme_provider.dart';
 import 'category_management_screen.dart';
 import 'google_sheet_settings_screen.dart';
+import '../../../common/providers/currency_provider.dart';
+import 'currency_selection_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -62,6 +64,21 @@ class SettingsScreen extends ConsumerWidget {
                       onTap: () {
                         Navigator.push(context, MaterialPageRoute(builder: (_) => const GoogleSheetSettingsScreen()));
                       },
+                    ),
+                    _Divider(),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final currency = ref.watch(currencyProvider);
+                        return _SettingsTile(
+                          icon: Icons.currency_exchange_rounded,
+                          iconColor: Colors.green,
+                          title: "Currency",
+                          subtitle: currency,
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const CurrencySelectionScreen()));
+                          },
+                        );
+                      }
                     ),
                   ],
                 ),

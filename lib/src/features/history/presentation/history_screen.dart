@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../transactions/data/transaction_provider.dart';
 import '../../transactions/domain/transaction_model.dart';
 import '../../transactions/presentation/add_transaction_screen.dart';
+import '../../../common/providers/currency_provider.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
@@ -119,13 +120,18 @@ class _TransactionItem extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              "${isIncome ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: isIncome ? Colors.green : Colors.red,
-              ),
+            Consumer(
+              builder: (context, ref, child) {
+                final currencySymbol = ref.watch(currencySymbolProvider);
+                return Text(
+                  "${isIncome ? '+' : '-'}$currencySymbol${transaction.amount.toStringAsFixed(2)}",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isIncome ? Colors.green : Colors.red,
+                  ),
+                );
+              }
             ),
           ],
         ),

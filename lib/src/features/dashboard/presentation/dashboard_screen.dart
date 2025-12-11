@@ -6,6 +6,7 @@ import '../../transactions/data/transaction_provider.dart';
 import '../../transactions/data/sync_service.dart';
 import '../../transactions/domain/transaction_model.dart';
 import '../../../common/providers/bottom_nav_provider.dart';
+import '../../../common/providers/currency_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -120,8 +121,9 @@ class DashboardScreen extends ConsumerWidget {
                     Consumer(
                       builder: (context, ref, child) {
                         final balance = ref.watch(totalBalanceProvider);
+                        final currencySymbol = ref.watch(currencySymbolProvider);
                         return Text(
-                          "\$${balance.toStringAsFixed(2)}",
+                          "$currencySymbol${balance.toStringAsFixed(2)}",
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 42,
@@ -249,9 +251,14 @@ class DashboardScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
-            Text(
-              "\$${amount.toStringAsFixed(0)}", 
-              style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w600)
+            Consumer(
+              builder: (context, ref, child) {
+                 final currencySymbol = ref.watch(currencySymbolProvider);
+                 return Text(
+                  "$currencySymbol${amount.toStringAsFixed(0)}", 
+                  style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w600)
+                );
+              }
             ),
           ],
         ),
@@ -333,13 +340,18 @@ class _TransactionTile extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              "${isIncome ? '+' : '-'}\$${transaction.amount.toStringAsFixed(2)}",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: isIncome ? const Color(0xFF10B981) : Theme.of(context).textTheme.bodyLarge?.color,
-              ),
+            Consumer(
+              builder: (context, ref, child) {
+                final currencySymbol = ref.watch(currencySymbolProvider);
+                return Text(
+                  "${isIncome ? '+' : '-'}$currencySymbol${transaction.amount.toStringAsFixed(2)}",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: isIncome ? const Color(0xFF10B981) : Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
+                );
+              }
             ),
           ],
         ),

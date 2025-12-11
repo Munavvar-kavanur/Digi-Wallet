@@ -7,6 +7,8 @@ import '../../../common/providers/theme_provider.dart';
 import 'package:http/http.dart' as http;
 import '../../transactions/domain/transaction_model.dart';
 import '../data/category_repository.dart';
+import '../../../common/providers/currency_provider.dart';
+import 'dart:convert';
 
 class GoogleSheetSettingsScreen extends ConsumerStatefulWidget {
   const GoogleSheetSettingsScreen({super.key});
@@ -141,6 +143,39 @@ function doPost(e) {
      return ContentService.createTextOutput(JSON.stringify({'status': 'success'})).setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action == 'saveSettings') {
+     var settingsSheet = ss.getSheetByName("Settings");
+     if (!settingsSheet) {
+       settingsSheet = ss.insertSheet("Settings");
+       settingsSheet.appendRow(["Key", "Value"]);
+     }
+     
+     var settings = json.settings; // { "currency": "USD", ... }
+     var keys = Object.keys(settings);
+     var rows = settingsSheet.getDataRange().getValues();
+     
+     for (var k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        var val = settings[key];
+        var found = false;
+        
+        // Update existing
+        for (var i = 1; i < rows.length; i++) {
+           if (rows[i][0] == key) {
+              settingsSheet.getRange(i + 1, 2).setValue(val);
+              found = true;
+              break;
+           }
+        }
+        
+        // Append new
+        if (!found) {
+           settingsSheet.appendRow([key, val]);
+        }
+     }
+     return ContentService.createTextOutput(JSON.stringify({'status': 'success'})).setMimeType(ContentService.MimeType.JSON);
+  }
+
   return ContentService.createTextOutput(JSON.stringify({'status': 'error', 'message': 'Invalid action'})).setMimeType(ContentService.MimeType.JSON);
 }
 ''';
@@ -167,6 +202,7 @@ function doPost(e) {
         ));
       }
       await _forcePushCategories();
+      await _syncSettings(url);
     }
     
     // Explicit success
@@ -194,6 +230,28 @@ function doPost(e) {
      } catch(e) {
        debugPrint("Failed to force push categories: $e");
      }
+  }
+
+  Future<void> _syncSettings(String url) async {
+    try {
+      final currency = ref.read(currencyProvider);
+      
+      final body = jsonEncode({
+        "action": "saveSettings",
+        "settings": {
+          "currency": currency
+        }
+      });
+      
+      await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+      debugPrint("Settings synced successfully");
+    } catch (e) {
+      debugPrint("Failed to sync settings: $e");
+    }
   }
 
   Future<void> _testConnection() async {

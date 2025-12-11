@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../transactions/data/transaction_provider.dart';
 import '../../transactions/domain/transaction_model.dart';
 import 'package:intl/intl.dart';
+import '../../../common/providers/currency_provider.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -112,7 +113,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
              // 2. Total Card
              SliverToBoxAdapter(child: Padding(
                padding: const EdgeInsets.symmetric(horizontal: 24),
-               child: _buildTotalCard(context, totalExpense),
+               child: Consumer(
+                 builder: (context, ref, child) {
+                   final currencySymbol = ref.watch(currencySymbolProvider);
+                   return _buildTotalCard(context, totalExpense, currencySymbol); 
+                 }
+               ),
              )),
 
              // 3. Bar Chart (Trends)
@@ -126,61 +132,66 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                      const SizedBox(height: 24),
                      SizedBox(
                        height: 200,
-                       child: BarChart(
-                         BarChartData(
-                           barTouchData: BarTouchData(
-                             touchTooltipData: BarTouchTooltipData(
-                               getTooltipColor: (_) => Theme.of(context).colorScheme.onSurface,
-                               getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                                  return BarTooltipItem(
-                                    '\$${rod.toY.round()}',
-                                    TextStyle(
-                                      color: Theme.of(context).colorScheme.surface,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  );
-                               },
-                             ),
-                             touchCallback: (e, r) {
-                               setState(() {
-                                 if (r?.spot != null && e.isInterestedForInteractions) {
-                                   _barTouchedIndex = r!.spot!.touchedBarGroupIndex;
-                                 } else {
-                                   _barTouchedIndex = -1;
+                       child: Consumer(
+                         builder: (context, ref, child) {
+                           final currencySymbol = ref.watch(currencySymbolProvider);
+                           return BarChart(
+                             BarChartData(
+                               barTouchData: BarTouchData(
+                                 touchTooltipData: BarTouchTooltipData(
+                                   getTooltipColor: (_) => Theme.of(context).colorScheme.onSurface,
+                                   getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                                      return BarTooltipItem(
+                                        '$currencySymbol${rod.toY.round()}',
+                                        TextStyle(
+                                          color: Theme.of(context).colorScheme.surface,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      );
+                                   },
+                                 ),
+                                 touchCallback: (e, r) {
+                                   setState(() {
+                                     if (r?.spot != null && e.isInterestedForInteractions) {
+                                       _barTouchedIndex = r!.spot!.touchedBarGroupIndex;
+                                     } else {
+                                       _barTouchedIndex = -1;
+                                     }
+                                   });
                                  }
-                               });
-                             }
-                           ),
-                           titlesData: FlTitlesData(
-                             show: true,
-                             rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                             topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                             bottomTitles: AxisTitles(
-                               sideTitles: SideTitles(
-                                 showTitles: true,
-                                 getTitlesWidget: (val, meta) {
-                                    int v = val.toInt();
-                                    if (v % (_filter == 'Week' ? 1 : 5) != 0) return const SizedBox.shrink();
-                                    String text = '';
-                                    if (_filter == 'Week') {
-                                       const days = ['M','T','W','T','F','S','S'];
-                                       if (v > 0 && v <= 7) text = days[v-1];
-                                    } else {
-                                       text = v.toString();
-                                    }
-                                    return Padding(
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: Text(text, style: TextStyle(fontSize: 10, color: Theme.of(context).disabledColor)),
-                                    );
-                                 },
                                ),
-                             ),
-                             leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                           ),
-                           borderData: FlBorderData(show: false),
-                           gridData: FlGridData(show: false),
-                           barGroups: _generateBarGroups(dailyTotals, context),
-                         )
+                               titlesData: FlTitlesData(
+                                 show: true,
+                                 rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                 topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                 bottomTitles: AxisTitles(
+                                   sideTitles: SideTitles(
+                                     showTitles: true,
+                                     getTitlesWidget: (val, meta) {
+                                        int v = val.toInt();
+                                        if (v % (_filter == 'Week' ? 1 : 5) != 0) return const SizedBox.shrink();
+                                        String text = '';
+                                        if (_filter == 'Week') {
+                                           const days = ['M','T','W','T','F','S','S'];
+                                           if (v > 0 && v <= 7) text = days[v-1];
+                                        } else {
+                                           text = v.toString();
+                                        }
+                                        return Padding(
+                                          padding: const EdgeInsets.only(top: 8),
+                                          child: Text(text, style: TextStyle(fontSize: 10, color: Theme.of(context).disabledColor)),
+                                        );
+                                     },
+                                   ),
+                                 ),
+                                 leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                               ),
+                               borderData: FlBorderData(show: false),
+                               gridData: FlGridData(show: false),
+                               barGroups: _generateBarGroups(dailyTotals, context),
+                             )
+                           );
+                         }
                        ),
                      ),
                    ],
@@ -224,15 +235,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                              ),
                            ),
                            // Center Text
-                           Column(
-                             mainAxisSize: MainAxisSize.min,
-                             children: [
-                               Text("Total", style: TextStyle(fontSize: 12, color: Theme.of(context).disabledColor)),
-                               Text(
-                                 "\$${totalExpense.toStringAsFixed(0)}",
-                                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                               ),
-                             ],
+                           Consumer(
+                             builder: (context, ref, child) {
+                               final currencySymbol = ref.watch(currencySymbolProvider);
+                               return Column(
+                                 mainAxisSize: MainAxisSize.min,
+                                 children: [
+                                   Text("Total", style: TextStyle(fontSize: 12, color: Theme.of(context).disabledColor)),
+                                   Text(
+                                     "$currencySymbol${totalExpense.toStringAsFixed(0)}",
+                                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                   ),
+                                 ],
+                               );
+                             }
                            )
                          ],
                        ),
@@ -249,7 +265,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                  delegate: SliverChildBuilderDelegate(
                    (context, index) {
                      final entry = sortedCategories[index];
-                     return _buildCategoryItem(context, entry.key, entry.value, totalExpense);
+                     return Consumer(
+                       builder: (context, ref, child) {
+                         final currencySymbol = ref.watch(currencySymbolProvider);
+                         return _buildCategoryItem(context, entry.key, entry.value, totalExpense, currencySymbol);
+                       }
+                     );
                    },
                    childCount: sortedCategories.length,
                  ),
@@ -284,7 +305,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
-  Widget _buildTotalCard(BuildContext context, double total) {
+  Widget _buildTotalCard(BuildContext context, double total, String currencySymbol) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -312,7 +333,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           Text("Total Budget Spent", style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
           const SizedBox(height: 8),
           Text(
-            "\$${total.toStringAsFixed(2)}", 
+            "$currencySymbol${total.toStringAsFixed(2)}", 
             style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1)
           ),
           const SizedBox(height: 8),
@@ -379,7 +400,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     });
   }
 
-  Widget _buildCategoryItem(BuildContext context, String category, double amount, double total) {
+  Widget _buildCategoryItem(BuildContext context, String category, double amount, double total, String currencySymbol) {
     final percentage = (amount / total);
     final color = _getColorFromString(category);
     
@@ -413,7 +434,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                    children: [
                      Text(category, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-                     Text("\$${amount.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.w600)),
+                     Text("$currencySymbol${amount.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.w600)),
                    ],
                  ),
                  const SizedBox(height: 8),

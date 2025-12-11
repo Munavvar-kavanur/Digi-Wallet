@@ -34,45 +34,60 @@ class MainScreen extends ConsumerWidget {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80, right: 16), // Adjusted for "just above" feeling
-        child: Container(
-          height: 60,
-          width: 60,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.tertiary,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  useSafeArea: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        padding: const EdgeInsets.only(bottom: 4, right: 16), // "Just near" the navbar (approx 4px)
+        child: ClipOval(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8), // Glass Effect
+            child: Container(
+              height: 64, // Slightly larger for better touch target and presence
+              width: 64,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.8), // Glassy Primary
+                    Theme.of(context).colorScheme.tertiary.withOpacity(0.6), // Glassy Tertiary
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.35), // Frosted Edge
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                    spreadRadius: 4,
                   ),
-                  builder: (context) => const AddTransactionScreen(),
-                );
-              },
-              customBorder: const CircleBorder(),
-              child: const Icon(Icons.add, color: Colors.white, size: 30),
+                  // Inner light reflection for 3D effect
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.3),
+                    blurRadius: 5,
+                    offset: const Offset(-2, -2),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      useSafeArea: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (context) => const AddTransactionScreen(),
+                    );
+                  },
+                  customBorder: const CircleBorder(),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 32),
+                ),
+              ),
             ),
           ),
         ),
